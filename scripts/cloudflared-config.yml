@@ -21,8 +21,20 @@
 tunnel: REEMPLAZA_CON_TU_TUNNEL_ID
 credentials-file: C:\Users\r\.cloudflared\REEMPLAZA_CON_TU_TUNNEL_ID.json
 
+# Registra logs del tunel para diagnostico
+logfile: F:\TicketInterno\TKT\Backup\cloudflared.log
+loglevel: info
+
 ingress:
   - hostname: tickets.myspectra.com.mx
     service: http://localhost:3080
-  # Regla catch-all obligatoria
+    originRequest:
+      # Socket.IO usa WebSockets: mantener conexiones largas vivas
+      noTLSVerify: true
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      # Reenvia el Host original para que la app genere URLs correctas
+      httpHostHeader: tickets.myspectra.com.mx
+  # Regla catch-all obligatoria (debe ir al final)
   - service: http_status:404

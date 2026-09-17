@@ -109,3 +109,18 @@ Cambios solicitados por el operador tras la entrega inicial:
 ---
 
 *Derechos reservados ULTRA 2026 · Soporte: soporte.spectra@corporativoultra.com*
+
+---
+
+## 8. Preparación del despliegue (Opción A) — continuación
+
+- **GitHub CLI instalado:** `gh` 2.101.0 vía winget en `C:\Program Files\GitHub CLI\gh.exe`. Queda **pendiente `gh auth login`** (interactivo, lo hace el operador). El `git push` funciona igual porque las credenciales de Git ya están configuradas.
+- **cloudflared-config.yml endurecido:** se añadió `logfile`, `loglevel` y bloque `originRequest` con soporte de WebSocket para Socket.IO (`connectTimeout`, `keepAliveTimeout`, `keepAliveConnections`, `httpHostHeader`).
+- **Script asistido `scripts/setup-cloudflared.ps1`:** automatiza instalar cloudflared, login, crear el túnel `ultra-tickets`, rellenar el config con el `TUNNEL_ID` y credenciales reales, enrutar el DNS de `tickets.myspectra.com.mx` e instalar el servicio de Windows. Parámetros `-Hostname` y `-TunnelName`. Sintaxis verificada.
+- **`docs/DESPLIEGUE.md`** actualizado con la opción rápida (script asistido) además de la manual.
+
+**Pendientes del operador para publicar:** 1) `gh auth login` (opcional). 2) Ejecutar `setup-cloudflared.ps1` como Administrador. 3) Subir `scripts/cpanel/.htaccess` a `public_html`. 4) Configurar Cloudflare Access para `@corporativoultra.com`. 5) Fijar `HOST=127.0.0.1` en `.env` con el túnel activo.
+
+---
+
+*Derechos reservados ULTRA 2026 · Soporte: soporte.spectra@corporativoultra.com*
