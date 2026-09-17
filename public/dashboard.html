@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="ultradark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>ULTRA · Panel de Tickets</title>
+  <link rel="icon" href="/assets/logo.ico" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/input.css" />
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" crossorigin="anonymous"></script>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif}
+    .brand-word{font-family:"Arial Black",Arial,sans-serif;font-weight:900;letter-spacing:2px}
+  </style>
+</head>
+<body class="bg-base-200 min-h-screen">
+  <!-- Barra superior con branding -->
+  <div class="navbar bg-base-100 shadow-md sticky top-0 z-40">
+    <div class="flex-1">
+      <div class="ultra-brand">
+        <img src="/assets/logo.png" class="ultra-logo" style="width:48px;height:48px" alt="ULTRA" />
+        <span class="brand-word text-xl" id="brandWord">ULTRA</span>
+        <span class="ml-3 text-sm opacity-60 hidden md:inline">Sistema de Tickets Interno</span>
+      </div>
+    </div>
+    <div class="flex-none gap-2 items-center">
+      <span id="welcome" class="text-sm text-right hidden md:block"></span>
+      <button id="btnPush" class="btn btn-ghost btn-sm" title="Activar notificaciones">🔔</button>
+      <button id="themeToggle" class="btn btn-circle btn-sm" title="Cambiar tema"><span id="themeIcon">🌙</span></button>
+      <button id="btnLogout" class="btn btn-outline btn-sm" style="border-color:#E30613;color:#E30613">Salir</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="max-w-6xl mx-auto px-4 py-4">
+    <div role="tablist" class="tabs tabs-boxed bg-base-100 mb-4 flex-wrap">
+      <a role="tab" class="tab tab-active" data-tab="crear">➕ Nuevo Ticket</a>
+      <a role="tab" class="tab" data-tab="mios">📋 Mis Tickets</a>
+      <a role="tab" class="tab" data-tab="depto">🏢 Tickets de mi Departamento</a>
+      <a role="tab" class="tab hidden" data-tab="buscar" id="tabBuscar">🔎 Buscador (Master)</a>
+      <a role="tab" class="tab hidden" data-tab="config" id="tabConfig">⚙️ Configuración</a>
+    </div>
+
+    <!-- PANEL: CREAR -->
+    <section data-panel="crear" class="space-y-4">
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="brand-word text-lg">Generador de Ticket</h2>
+          <form id="ticketForm" class="space-y-3">
+            <div class="grid md:grid-cols-2 gap-3">
+              <label class="form-control">
+                <span class="label-text mb-1">Asunto</span>
+                <input id="asunto" class="input input-bordered" required placeholder="Resumen breve" />
+              </label>
+              <label class="form-control">
+                <span class="label-text mb-1">Prioridad</span>
+                <select id="prioridad" class="select select-bordered">
+                  <option value="baja">Baja</option>
+                  <option value="media" selected>Media</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </label>
+            </div>
+            <label class="form-control">
+              <span class="label-text mb-1">Descripción</span>
+              <textarea id="descripcion" class="textarea textarea-bordered" rows="4" required
+                        placeholder="Describe el requerimiento con el detalle necesario"></textarea>
+            </label>
+
+            <!-- Acordeón de departamentos destino (múltiples) -->
+            <div>
+              <span class="label-text">Departamentos destino (uno o varios)</span>
+              <div id="acordeonDeptos" class="join join-vertical w-full mt-1"></div>
+            </div>
+
+            <label class="form-control">
+              <span class="label-text mb-1">Adjunto (opcional)</span>
+              <input id="adjunto" type="file" class="file-input file-input-bordered" />
+            </label>
+
+            <button type="submit" class="btn btn-primary" style="background:#E30613;border:none">Crear ticket</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL: MIS TICKETS -->
+    <section data-panel="mios" class="hidden">
+      <div id="listaMios" class="grid gap-3"></div>
+    </section>
+
+    <!-- PANEL: DEPTO -->
+    <section data-panel="depto" class="hidden">
+      <div id="listaDepto" class="grid gap-3"></div>
+    </section>
+
+    <!-- PANEL: BUSCADOR (master) -->
+    <section data-panel="buscar" class="hidden space-y-3">
+      <div class="card bg-base-100 shadow"><div class="card-body">
+        <div class="grid md:grid-cols-3 gap-3 items-end">
+          <label class="form-control">
+            <span class="label-text mb-1">Buscar por folio</span>
+            <input id="buscarFolio" class="input input-bordered" placeholder="TKT-..." />
+          </label>
+          <label class="form-control">
+            <span class="label-text mb-1">Buscar por departamento</span>
+            <select id="buscarDepto" class="select select-bordered"><option value="">Todos</option></select>
+          </label>
+          <button id="btnBuscar" class="btn btn-primary" style="background:#E30613;border:none">Buscar</button>
+        </div>
+      </div></div>
+      <div id="listaBuscar" class="grid gap-3"></div>
+    </section>
+
+    <!-- PANEL: CONFIG (master) -->
+    <section data-panel="config" class="hidden space-y-4">
+      <div class="tabs tabs-bordered">
+        <a class="tab tab-active" data-ctab="usuarios">Usuarios</a>
+        <a class="tab" data-ctab="deptos">Departamentos</a>
+        <a class="tab" data-ctab="bitacora">Bitácora</a>
+      </div>
+
+      <div data-cpanel="usuarios">
+        <div class="card bg-base-100 shadow mb-3"><div class="card-body">
+          <h3 class="font-bold">Alta de usuario</h3>
+          <div class="grid md:grid-cols-4 gap-2 items-end">
+            <input id="nu_correo" class="input input-bordered input-sm" placeholder="correo@corporativoultra.com" />
+            <input id="nu_tel" class="input input-bordered input-sm" placeholder="Teléfono (clave inicial)" />
+            <select id="nu_dep" class="select select-bordered select-sm"></select>
+            <select id="nu_rol" class="select select-bordered select-sm">
+              <option value="usuario">Usuario</option><option value="master">Master</option>
+            </select>
+          </div>
+          <button id="btnAltaUsuario" class="btn btn-sm btn-primary mt-2" style="background:#E30613;border:none">Dar de alta (PIN)</button>
+        </div></div>
+        <div id="listaUsuarios" class="overflow-x-auto"></div>
+      </div>
+
+      <div data-cpanel="deptos" class="hidden">
+        <div class="card bg-base-100 shadow mb-3"><div class="card-body">
+          <div class="flex gap-2 items-end">
+            <input id="nd_nombre" class="input input-bordered input-sm" placeholder="Nuevo departamento" />
+            <button id="btnAltaDepto" class="btn btn-sm btn-primary" style="background:#E30613;border:none">Agregar</button>
+          </div>
+        </div></div>
+        <div id="listaDeptos" class="grid gap-2"></div>
+      </div>
+
+      <div data-cpanel="bitacora" class="hidden">
+        <div id="listaBitacora" class="overflow-x-auto"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="text-center text-xs opacity-60 py-6">
+    Derechos reservados ULTRA 2026 · Soporte:
+    <a href="mailto:soporte.spectra@corporativoultra.com" class="link">soporte.spectra@corporativoultra.com</a>
+  </footer>
+
+  <script src="/js/buzzbox.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

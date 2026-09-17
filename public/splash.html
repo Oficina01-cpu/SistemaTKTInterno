@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="ultradark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULTRA · Tickets Internos</title>
+  <link rel="icon" href="/assets/logo.ico" />
+  <!-- Redirige al login tras 2 segundos -->
+  <meta http-equiv="refresh" content="2; url=/index.html" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <link rel="stylesheet" href="/css/input.css" />
+  <style>
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif}
+    .splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      background:radial-gradient(circle at center,#2a2a2a 0%,#0f0f0f 100%)}
+    .logo{width:140px;height:140px;border-radius:9999px;animation:pulse 1.2s ease-in-out infinite;box-shadow:0 6px 24px rgba(227,6,19,.35)}
+    .word{font-family:"Arial Black",Arial,sans-serif;font-weight:900;letter-spacing:6px;color:#fff;margin-top:18px;font-size:34px}
+    .sub{color:#9A9A9A;margin-top:6px;letter-spacing:2px;font-size:13px}
+    .bar{width:220px;height:6px;border-radius:9999px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:22px}
+    .bar>span{display:block;height:100%;width:0;background:#E30613;animation:load 2s linear forwards}
+    @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:.85}}
+    @keyframes load{from{width:0}to{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <img class="logo" src="/assets/logo.png" alt="ULTRA" />
+    <div class="word">ULTRA</div>
+    <div class="sub">SISTEMA DE TICKETS INTERNO</div>
+    <div class="bar"><span></span></div>
+  </div>
+  <script>
+    // Respaldo por si el meta-refresh falla
+    setTimeout(function(){ location.replace("/index.html"); }, 2100);
+  </script>
+</body>
+</html>

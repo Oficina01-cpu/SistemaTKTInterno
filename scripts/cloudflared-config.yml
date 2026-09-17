@@ -1,0 +1,28 @@
+# ============================================================================
+# cloudflared-config.yml — Configuracion de Cloudflare Tunnel (gratis)
+# Expone el backend local (http://localhost:3080) a Internet con HTTPS,
+# sin abrir puertos en el firewall ni IP publica.
+#
+# PASOS (una sola vez):
+#   1) Instala cloudflared:  https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+#   2) cloudflared tunnel login
+#   3) cloudflared tunnel create ultra-tickets
+#      -> genera un archivo de credenciales <TUNNEL_ID>.json y un TUNNEL_ID
+#   4) Copia el TUNNEL_ID abajo y la ruta al .json
+#   5) Enruta el DNS:
+#        cloudflared tunnel route dns ultra-tickets tickets.myspectra.com.mx
+#   6) Instala como servicio de Windows:
+#        cloudflared --config scripts\cloudflared-config.yml service install
+#
+# NOTA: Cloudflare Tunnel publica en un (sub)dominio, p.ej. tickets.myspectra.com.mx
+#       (ver docs/DESPLIEGUE.md para servir bajo /TicketInterno via cPanel proxy).
+# ============================================================================
+
+tunnel: REEMPLAZA_CON_TU_TUNNEL_ID
+credentials-file: C:\Users\r\.cloudflared\REEMPLAZA_CON_TU_TUNNEL_ID.json
+
+ingress:
+  - hostname: tickets.myspectra.com.mx
+    service: http://localhost:3080
+  # Regla catch-all obligatoria
+  - service: http_status:404

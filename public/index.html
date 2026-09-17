@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="ultradark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>ULTRA · Ingreso</title>
+  <link rel="icon" href="/assets/logo.ico" />
+  <!-- Tailwind v4 + DaisyUI via CDN (fallback robusto). El build local ./css/app.css tambien se enlaza. -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/input.css" />
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+    .brand-word{font-family:"Arial Black",Arial,sans-serif;font-weight:900;letter-spacing:2px}
+  </style>
+</head>
+<body class="bg-base-200">
+  <!-- Toggle tema light/dark -->
+  <button id="themeToggle" class="btn btn-circle btn-sm absolute top-4 right-4" title="Cambiar tema">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="flex items-center justify-center min-h-screen px-4">
+    <div class="card w-full max-w-md bg-base-100 shadow-2xl border-t-4" style="border-color:#E30613">
+      <div class="card-body">
+        <div class="flex flex-col items-center mb-2">
+          <img src="/assets/logo.png" class="ultra-logo mb-2" alt="ULTRA" />
+          <h1 class="brand-word text-3xl">ULTRA</h1>
+          <p class="text-sm opacity-70">Sistema de Tickets Interno</p>
+        </div>
+
+        <form id="loginForm" class="space-y-3">
+          <label class="form-control">
+            <span class="label-text mb-1">Correo corporativo</span>
+            <input id="correo" type="email" required placeholder="usuario@corporativoultra.com"
+                   class="input input-bordered w-full" autocomplete="username" />
+          </label>
+          <label class="form-control">
+            <span class="label-text mb-1">Contraseña</span>
+            <input id="password" type="password" required placeholder="Tu contraseña"
+                   class="input input-bordered w-full" autocomplete="current-password" />
+            <span class="text-xs opacity-60 mt-1">Primer ingreso: tu contraseña es tu número de teléfono.</span>
+          </label>
+          <button type="submit" class="btn btn-primary w-full" style="background:#E30613;border:none">
+            Ingresar
+          </button>
+        </form>
+      </div>
+      <footer class="text-center text-xs opacity-60 pb-4">
+        Derechos reservados ULTRA 2026 · Soporte:
+        <a href="mailto:soporte.spectra@corporativoultra.com" class="link">soporte.spectra@corporativoultra.com</a>
+      </footer>
+    </div>
+  </main>
+
+  <script src="/js/buzzbox.js"></script>
+  <script src="/js/auth-client.js"></script>
+</body>
+</html>
