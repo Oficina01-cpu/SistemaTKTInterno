@@ -1,22 +1,16 @@
 # ============================================================================
-# .htaccess — Redirección de myspectra.com.mx/TicketInterno al sistema ULTRA
+# .htaccess — Redirección de myspectra.com.mx/ticketInterno al sistema ULTRA
 # Colocar en la raíz pública (public_html) del dominio en cPanel.
 #
 # El Sistema de Tickets ULTRA corre en el servidor Windows y se expone por
-# Cloudflare Tunnel en el subdominio tickets.myspectra.com.mx.
-# Esta redirección lleva /TicketInterno a ese subdominio (opción recomendada).
+# Cloudflare Tunnel en el subdominio de marca: ticketinterno.myspectra.com.mx
+# Esta redirección lleva /ticketInterno a ese subdominio.
+# La barra del navegador mostrará https://ticketinterno.myspectra.com.mx
+# (tu propio dominio, con HTTPS) — no expone Cloudflare, IP ni puerto.
 # ============================================================================
 
 RewriteEngine On
 
-# Redirección 302 de /TicketInterno (con o sin barra) al subdominio del túnel
-RewriteRule ^TicketInterno/?$ https://tickets.myspectra.com.mx/ [R=302,L]
-
-# ----------------------------------------------------------------------------
-# ALTERNATIVA (solo si el hosting soporta mod_proxy + mod_proxy_wstunnel y se
-# desea CONSERVAR la URL myspectra.com.mx/TicketInterno). Descomentar y probar.
-# Requiere además que el backend se sirva bajo el prefijo /TicketInterno.
-# ----------------------------------------------------------------------------
-# RewriteCond %{HTTP:Upgrade} =websocket [NC]
-# RewriteRule ^TicketInterno/(.*)$ wss://tickets.myspectra.com.mx/$1 [P,L]
-# RewriteRule ^TicketInterno/(.*)$ https://tickets.myspectra.com.mx/$1 [P,L]
+# Redirección 302 de /ticketInterno (mayus/minus indistinto, con o sin barra)
+# hacia el subdominio de marca servido por el túnel Cloudflare.
+RewriteRule ^ticketInterno/?$ https://ticketinterno.myspectra.com.mx/ [R=302,L,NC]

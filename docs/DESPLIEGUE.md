@@ -53,14 +53,17 @@ Pasos:
    ```
    > El token es secreto: no lo publiques ni lo subas al repositorio.
 2. En el panel del túnel → pestaña **Public Hostname** → **Add a public hostname**:
-   - **Subdomain:** `tickets`
+   - **Subdomain:** `ticketinterno`
    - **Domain:** `myspectra.com.mx`
+   - **Path:** (vacío)
    - **Type:** `HTTP`
    - **URL:** `localhost:3080`
-   - En **Additional application settings → TLS**, deja `No TLS Verify` si aplica; en **HTTP Settings** puedes fijar el `HTTP Host Header` a `tickets.myspectra.com.mx`.
+   - En **HTTP Settings** puedes fijar el `HTTP Host Header` a `ticketinterno.myspectra.com.mx`.
 3. Cloudflare crea el registro DNS automáticamente. Espera a que el estado del túnel pase a **HEALTHY/Connected**.
 
-Con el túnel por dashboard **no se usa** `cloudflared-config.yml` ni `setup-cloudflared.ps1` (esos son para la Forma 2). Verifica: `https://tickets.myspectra.com.mx/health`.
+Con el túnel por dashboard **no se usa** `cloudflared-config.yml` ni `setup-cloudflared.ps1` (esos son para la Forma 2). Verifica: `https://ticketinterno.myspectra.com.mx/health`.
+
+**Redirección de marca:** sube `scripts/cpanel/.htaccess` a `public_html/` para que `myspectra.com.mx/ticketInterno` redirija a `https://ticketinterno.myspectra.com.mx/`. La barra del navegador mostrará el subdominio de marca (tu propio dominio con HTTPS), sin exponer Cloudflare, IP ni puerto.
 
 #### Forma 2 — Túnel con configuración local (alternativa)
 
