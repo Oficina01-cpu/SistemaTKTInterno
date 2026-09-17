@@ -37,14 +37,41 @@ La app usa **rutas absolutas** (`/js/app.js`, `/api/*`, `/socket.io`, `/sw.js`).
 
 **Requisito previo:** `myspectra.com.mx` gestionado por Cloudflare (nameservers apuntando a Cloudflare).
 
-**Opción rápida — script asistido (recomendado):** ejecuta como Administrador y sigue el navegador cuando pida login:
+> Hay **dos formas** de configurar el túnel. Elige UNA.
+
+#### Forma 1 — Túnel gestionado por el Dashboard (la que estás usando)
+
+Cuando creas el túnel desde el panel de Cloudflare (Zero Trust → Networks → Tunnels), la configuración de **ingress y DNS se administra en la web**, y en el servidor solo instalas el conector con el token que te dan.
+
+- **Túnel:** `ticketInterno`
+- **ID:** `09614fe3-f08e-47fb-addb-1bf814831e9c`
+
+Pasos:
+1. En el servidor Windows, **abre PowerShell/CMD como Administrador** y ejecuta el comando que muestra el panel (instala el servicio con tu token):
+   ```powershell
+   cloudflared.exe service install <TU_TOKEN>
+   ```
+   > El token es secreto: no lo publiques ni lo subas al repositorio.
+2. En el panel del túnel → pestaña **Public Hostname** → **Add a public hostname**:
+   - **Subdomain:** `tickets`
+   - **Domain:** `myspectra.com.mx`
+   - **Type:** `HTTP`
+   - **URL:** `localhost:3080`
+   - En **Additional application settings → TLS**, deja `No TLS Verify` si aplica; en **HTTP Settings** puedes fijar el `HTTP Host Header` a `tickets.myspectra.com.mx`.
+3. Cloudflare crea el registro DNS automáticamente. Espera a que el estado del túnel pase a **HEALTHY/Connected**.
+
+Con el túnel por dashboard **no se usa** `cloudflared-config.yml` ni `setup-cloudflared.ps1` (esos son para la Forma 2). Verifica: `https://tickets.myspectra.com.mx/health`.
+
+#### Forma 2 — Túnel con configuración local (alternativa)
+
+**Opción rápida — script asistido:** ejecuta como Administrador y sigue el navegador cuando pida login:
 ```powershell
 cd F:\TicketInterno\TKT
 .\scripts\setup-cloudflared.ps1
 ```
-El script instala `cloudflared` si falta, hace login, crea el túnel `ultra-tickets`, **rellena solo** `cloudflared-config.yml` con el `TUNNEL_ID` y las credenciales reales, enruta el DNS de `tickets.myspectra.com.mx` e instala el servicio de Windows. Acepta parámetros `-Hostname` y `-TunnelName` si quieres cambiar los valores por defecto.
+El script instala `cloudflared` si falta, hace login, crea el túnel `ultra-tickets`, **rellena solo** `cloudflared-config.yml` con el `TUNNEL_ID` y las credenciales reales, enruta el DNS de `tickets.myspectra.com.mx` e instala el servicio de Windows. Acepta parámetros `-Hostname` y `-TunnelName`.
 
-**Opción manual (equivalente):**
+**Opción manual (equivalente a la Forma 2):**
 1. **Instala cloudflared:** https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
 2. Autentícate y crea el túnel:
    ```powershell
