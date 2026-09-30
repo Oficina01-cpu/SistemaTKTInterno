@@ -31,17 +31,21 @@
   const THEME_KEY = "ultra_theme";
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
-    document.getElementById("themeIcon").textContent = t === "ultradark" ? "🌙" : "☀️";
+    const icon = document.getElementById("themeIcon");
+    if (icon) icon.textContent = t === "dark" ? "🌙" : "☀️";
     // Palabra ULTRA blanca en dark, negra en light
     const bw = document.getElementById("brandWord");
-    if (bw) bw.style.color = t === "ultradark" ? "#FFFFFF" : "#1A1A1A";
+    if (bw) bw.style.color = t === "dark" ? "#FFFFFF" : "#1A1A1A";
     if (window.BuzzBox) BuzzBox.syncTheme();
     localStorage.setItem(THEME_KEY, t);
   }
-  applyTheme(localStorage.getItem(THEME_KEY) || "ultradark");
+  let _saved = localStorage.getItem(THEME_KEY);
+  if (_saved === "ultradark") _saved = "dark";
+  if (_saved === "ultralight") _saved = "light";
+  applyTheme(_saved || "dark");
   document.getElementById("themeToggle").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme");
-    applyTheme(cur === "ultradark" ? "ultralight" : "ultradark");
+    applyTheme(cur === "dark" ? "light" : "dark");
   });
 
   // Si ya hay token válido, ir directo al dashboard

@@ -80,7 +80,10 @@ export default async function configRoutes(fastify) {
     }
   });
 
-  // ---- BAJA usuario (master + PIN) ----
+  // ---- BAJA usuario: BORRADO COMPLETO (master + PIN) ----
+  // Elimina al usuario de la base de datos por completo (desaparece de la lista).
+  // Preserva sus tickets desvinculando el autor (para no perder historico) y
+  // limpia sesiones y suscripciones push. Todo queda en bitacora.
   fastify.delete("/api/usuarios/:id", { preHandler: fastify.authMaster }, async (req, reply) => {
     const pin = req.query.pin || req.body?.pin;
     if (String(pin) !== String(ADMIN_PIN)) {
@@ -88,13 +91,30 @@ export default async function configRoutes(fastify) {
     }
     const id = Number(req.params.id);
     if (id === req.currentUser.id) {
-      return reply.code(400).send({ ok: false, error: "No puedes darte de baja a ti mismo" });
+      return reply.code(400).send({ ok: false, error: "No puedes eliminarte a ti mismo" });
     }
-    db.prepare("UPDATE usuarios SET activo = 0 WHERE id = ?").run(id);
-    // Revocar sesiones activas del usuario
-    db.prepare("UPDATE sesiones SET revocada = 1 WHERE usuario_id = ?").run(id);
-    registrar({ usuario_id: req.currentUser.id, correo: req.currentUser.correo, accion: "USUARIO_BAJA", detalle: `id ${id}`, ip: clientIp(req) });
-    return { ok: true };
+    const u = db.prepare("SELECT correo, nombre FROM usuarios WHERE id = ?").get(id);
+    if (!u) return reply.code(404).send({ ok: false, error: "Usuario no encontrado" });
+
+    const ticketsDelUsuario = db.prepare("SELECT COUNT(*) c FROM tickets WHERE autor_id = ?").get(id).c;
+    // Conservar los tickets historicos: se reasignan al master que ejecuta la baja
+    // (la columna autor_id es NOT NULL, por eso reasignamos en vez de poner NULL).
+    db.prepare("UPDATE tickets SET autor_id = ? WHERE autor_id = ?").run(req.currentUser.id, id);
+    // Limpiar sesiones y suscripciones push del usuario.
+    db.prepare("DELETE FROM sesiones WHERE usuario_id = ?").run(id);
+    db.prepare("DELETE FROM push_subscriptions WHERE usuario_id = ?").run(id);
+    // Borrado real del usuario (desaparece de la lista).
+    db.prepare("DELETE FROM usuarios WHERE id = ?").run(id);
+
+    registrar({
+      usuario_id: req.currentUser.id,
+      correo: req.currentUser.correo,
+      accion: "USUARIO_ELIMINADO",
+      detalle: `Eliminado ${u.correo}${u.nombre ? " (" + u.nombre + ")" : ""} [id ${id}]` +
+               (ticketsDelUsuario ? ` · ${ticketsDelUsuario} ticket(s) reasignado(s)` : ""),
+      ip: clientIp(req),
+    });
+    return { ok: true, eliminado: u.correo };
   });
 
   // ---- Reactivar usuario (master + PIN) ----

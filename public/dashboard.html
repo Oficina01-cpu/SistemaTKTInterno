@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="ultradark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -75,10 +75,18 @@
               <div id="acordeonDeptos" class="join join-vertical w-full mt-1"></div>
             </div>
 
-            <label class="form-control">
+            <div class="form-control">
               <span class="label-text mb-1">Adjunto (opcional)</span>
-              <input id="adjunto" type="file" class="file-input file-input-bordered" />
-            </label>
+              <div class="flex items-center gap-3">
+                <button type="button" id="btnAdjunto" class="btn btn-sm" style="background:#9A9A9A;color:#1A1A1A;border:none">
+                  📎 Seleccionar archivo
+                </button>
+                <span id="adjuntoNombre" class="text-sm opacity-70">Ningún archivo seleccionado</span>
+                <button type="button" id="btnAdjuntoQuitar" class="btn btn-ghost btn-xs hidden">✕ Quitar</button>
+              </div>
+              <!-- input nativo oculto: evita el texto "Choose file" del navegador -->
+              <input id="adjunto" type="file" class="hidden" />
+            </div>
 
             <button type="submit" class="btn btn-primary" style="background:#E30613;border:none">Crear ticket</button>
           </form>

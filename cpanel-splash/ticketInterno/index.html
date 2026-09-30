@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULTRA · Sistema de Tickets Interno</title>
+  <link rel="icon" href="logo.ico" />
+  <meta name="robots" content="noindex" />
+  <style>
+    :root{
+      --ultra-red:#E30613; --ultra-gray:#9A9A9A; --ultra-dark:#1A1A1A; --ultra-light:#FFFFFF;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:Arial,Helvetica,sans-serif}
+    body{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:100vh;background:radial-gradient(circle at center,#2a2a2a 0%,#0f0f0f 100%);
+      color:#fff;overflow:hidden;
+    }
+    .logo{
+      width:140px;height:140px;border-radius:9999px;object-fit:cover;
+      box-shadow:0 6px 24px rgba(227,6,19,.35);animation:pulse 1.2s ease-in-out infinite;
+    }
+    .word{
+      font-family:"Arial Black",Arial,sans-serif;font-weight:900;letter-spacing:6px;
+      font-size:38px;margin-top:20px;color:#fff;
+    }
+    .sub{color:var(--ultra-gray);margin-top:8px;letter-spacing:2px;font-size:13px;text-transform:uppercase}
+    .cargando{margin-top:26px;color:#e9e9e9;font-size:14px;letter-spacing:1px}
+    .cargando .dots span{animation:blink 1.4s infinite both;font-weight:900;color:var(--ultra-red)}
+    .cargando .dots span:nth-child(2){animation-delay:.2s}
+    .cargando .dots span:nth-child(3){animation-delay:.4s}
+    .bar{
+      width:240px;height:6px;border-radius:9999px;background:rgba(255,255,255,.15);
+      overflow:hidden;margin-top:18px;
+    }
+    .bar>span{display:block;height:100%;width:0;background:var(--ultra-red);border-radius:9999px;
+      animation:load 2.6s linear forwards}
+    .pie{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:var(--ultra-gray);font-size:11px;padding:0 12px}
+    .pie a{color:var(--ultra-gray)}
+    .fallback{margin-top:20px;font-size:13px}
+    .fallback a{color:#fff;font-weight:700}
+    @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:.85}}
+    @keyframes load{from{width:0}to{width:100%}}
+    @keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+  </style>
+</head>
+<body>
+  <img class="logo" src="logo.png" alt="ULTRA" onerror="this.style.display='none'" />
+  <div class="word">ULTRA</div>
+  <div class="sub">Sistema de Tickets Interno</div>
+
+  <div class="cargando">Cargando el sistema<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div class="bar"><span></span></div>
+
+  <div class="fallback">
+    ¿No redirige? <a href="https://tickets.5962503.dpdns.org/index.html">Entrar manualmente</a>
+  </div>
+
+  <div class="pie">
+    Derechos reservados ULTRA 2026 · Soporte:
+    <a href="mailto:soporte.spectra@corporativoultra.com">soporte.spectra@corporativoultra.com</a>
+  </div>
+
+  <script>
+    // Destino: el LOGIN directo (evita el segundo splash del servidor).
+    var DESTINO = "https://tickets.5962503.dpdns.org/index.html";
+    // Redirige tras la animacion de carga (~2.6s)
+    setTimeout(function () {
+      window.location.replace(DESTINO);
+    }, 2600);
+  </script>
+</body>
+</html>

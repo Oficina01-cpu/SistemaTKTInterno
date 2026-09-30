@@ -135,10 +135,10 @@ await fastify.register(bitacoraRoutes);
 fastify.register(async (f) => notificacionesRoutes(f));
 
 // ---- Paginas ----
-// Splash en la raiz (redirige a login tras 2s)
+// La raiz va DIRECTO al login (sin splash del servidor). El unico splash es el
+// de entrada en myspectra.com.mx/ticketInterno; asi se evita el doble splash.
 fastify.get("/", async (req, reply) => {
-  reply.type("text/html");
-  return readFileSync(join(PUBLIC, "splash.html"), "utf8");
+  return reply.redirect("/index.html", 302);
 });
 
 // Healthcheck

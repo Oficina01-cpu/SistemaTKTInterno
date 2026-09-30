@@ -124,3 +124,103 @@ Cambios solicitados por el operador tras la entrega inicial:
 ---
 
 *Derechos reservados ULTRA 2026 · Soporte: soporte.spectra@corporativoultra.com*
+
+---
+
+## 9. Despliegue real con Cloudflare Tunnel (17/09/2026)
+
+Sesión de puesta en producción del acceso por Internet. Hallazgos y configuración **real** (sustituye a la teoría de secciones anteriores donde difiera):
+
+### Infraestructura descubierta
+- **Dominio principal `myspectra.com.mx`:** nameservers de **HostGator** (`ns00018/19.hostgator.mx`), IP `69.6.201.195`. **NO está en Cloudflare.** Por eso no puede usarse directamente como hostname del túnel.
+- **Dominio `ultra.dpdns.org`:** **SÍ gestionado por Cloudflare** (NS `magali.ns.cloudflare.com`, `fred.ns.cloudflare.com`), en la cuenta `Carlos.urdaneta@...`. Este es el que sirve para publicar.
+- **`labultra.dpdns.org`:** administrado en un hosting gratuito byet.org (`ns1..ns5.byet.org`). No se usa para tickets.
+- **Túnel cloudflared preexistente:** el servicio de Windows `cloudflared` corre desde `F:\ServerManager\cloudflared\cloudflared.exe` con `--token-file C:\ProgramData\cloudflared\token`, y **da servicio a DOS sistemas en producción**. NO debe tocarse ni reinstalarse su token.
+
+### Decisión de despliegue (revisada)
+- **URL final elegida:** `https://ticketInterno.ultra.dpdns.org` (subdominio de marca en la zona Cloudflare disponible), en lugar de `tickets.myspectra.com.mx`, porque `myspectra.com.mx` no está en Cloudflare.
+- Redirección opcional desde `myspectra.com.mx/ticketInterno` (HostGator/cPanel `.htaccess`) hacia ese subdominio.
+
+### Túnel `ticketInterno`
+- Creado en el panel de Cloudflare. **ID:** `09614fe3-f08e-47fb-addb-1bf814831e9c`.
+- Public Hostname configurado: `ticketInterno.ultra.dpdns.org` → `http://localhost:3080`.
+- El servicio de Windows existente NO sirve este túnel (está ocupado con los otros 2 sistemas). Solución aplicada: **levantar un SEGUNDO conector** con el token de `ticketInterno`:
+  ```
+  cloudflared.exe tunnel run --token <TOKEN_DE_ticketInterno>
+  ```
+  Verificado: el conector registró 4 conexiones y cargó el ingress `ticketInterno.ultra.dpdns.org → http://localhost:3080`.
+- **Puerto local del sistema de tickets: 3080 (HTTP).** URL del servicio en el túnel: `http://localhost:3080`.
+
+### Pendiente para que quede público (operador)
+1. **Crear registro DNS en Cloudflare** (zona `ultra.dpdns.org` → DNS → Records → Add record):
+   - Type `CNAME`, Name `ticketInterno`, Target `09614fe3-f08e-47fb-addb-1bf814831e9c.cfargotunnel.com`, Proxied (nube naranja) ON.
+   - Sin este registro, el hostname no resuelve (Cloudflare avisó: *"this domain isn't a zone on your account"* al agregarlo desde la vista del túnel, pero la zona sí existe: crear el CNAME manualmente en DNS → Records lo resuelve).
+2. **Persistir el segundo conector** como servicio propio (el actual se levantó en background para pruebas; para producción, instalarlo como servicio de Windows independiente con su token, o migrar a config unificada sin tocar los otros 2 sistemas).
+3. (Opcional) `.htaccess` en HostGator para redirigir `myspectra.com.mx/ticketInterno`.
+
+### Aclaración importante sobre cPanel
+- El sistema de tickets **NO se sube a cPanel ni a hosting compartido**: corre como proceso Node en el servidor Windows. cPanel solo serviría (opcionalmente) para la redirección `.htaccess`. No hay que crear carpetas ni subir el sistema al hosting.
+
+### Seguridad
+- **Rotar el token del túnel** en el panel de Cloudflare: quedó expuesto durante la sesión de soporte.
+
+---
+
+*Derechos reservados ULTRA 2026 · Soporte: soporte.spectra@corporativoultra.com*
+
+---
+
+## 10. Sesión de operación y correcciones (30/09/2026)
+
+### Despliegue público FINAL que quedó funcionando
+- **URL pública del sistema:** `https://tickets.5962503.dpdns.org` (responde HTTP 200 con HTTPS).
+- **Túnel Cloudflare usado:** `ticketINT`, ID `f46c1a2f-523e-4860-a902-859de4218eed`, en una **cuenta nueva de Cloudflare** (la cuenta anterior `Carlos.urdaneta@` no era viable).
+- **Dominio:** `5962503.dpdns.org`, **movido a Cloudflare** (nameservers `salvador.ns.cloudflare.com` / `selah.ns.cloudflare.com`). Esto fue CLAVE: con el dominio fuera de Cloudflare el CNAME a `cfargotunnel.com` NO resuelve (da 1016). Solo funciona con el dominio gestionado por Cloudflare (proxied).
+- **Registro DNS:** CNAME `tickets` → `f46c1a2f-...cfargotunnel.com` (proxied). OJO: DigitalPlat concatenaba el dominio al valor; se corrigió poniendo el valor con **punto final** o dejando que Cloudflare lo gestione.
+- **Conector cloudflared del túnel `ticketINT`:** se levantó como proceso aparte (segundo conector) para NO tocar el servicio cloudflared que sirve los otros sistemas. PENDIENTE dejarlo como servicio propio permanente (hoy corre en background).
+- **Redirección desde myspectra:** `myspectra.com.mx` está en HostGator (NS hostgator.mx, IP 69.6.201.195), NO en Cloudflare. La entrada de marca se hace con un splash en `public_html/ticketInterno/` (ver §Splash cPanel).
+
+### ARQUITECTURA DE PROCESOS EN EL SERVIDOR (MUY IMPORTANTE)
+El servidor Windows corre **varios sistemas** (4-6). Mapa de puertos node confirmado:
+| Puerto | Sistema |
+|--------|---------|
+| **3080** | **Sistema de Tickets Interno ULTRA (ESTE)** — servicio `ULTRA_Tickets` |
+| 8081, 8082, 8083, 8090 | Otros sistemas (uno puede ser "tickets de clientes", NO tocar) |
+
+- **NUESTRO backend YA es un servicio de Windows:** `ULTRA_Tickets` (NSSM, cuenta LocalSystem, arranque Automático, binario `F:\TicketInterno\TKT\scripts\nssm.exe`).
+- El node del puerto 3080 es **hijo** del proceso del servicio `ULTRA_Tickets`.
+- **PARA APLICAR CAMBIOS DE BACKEND** (server/*.js): reiniciar el servicio en PowerShell **como Administrador**:
+  ```powershell
+  Restart-Service ULTRA_Tickets
+  Start-Sleep 3
+  Invoke-RestMethod http://localhost:3080/health
+  ```
+- Los cambios de **frontend** (public/*.html, *.js) NO requieren reinicio: se sirven con no-cache; basta recargar el navegador con Ctrl+Shift+R.
+- NUNCA matar procesos node por PID a ciegas: hay otros sistemas en producción. Identificar SIEMPRE por puerto 3080 / servicio ULTRA_Tickets.
+
+### Correcciones aplicadas en esta sesión
+1. **Alta de usuario no registraba:** bug en `BuzzBox.prompt()` que leía el input después de cerrar el modal → PIN llegaba null. Corregido en `public/js/buzzbox.js` (el botón OK captura el valor en su `.value` antes de cerrar).
+2. **Toggle tema sol/luna no funcionaba:** usaba temas custom `ultradark/ultralight` que no existen en el DaisyUI del CDN. Cambiado a temas estándar **`dark`/`light`** en index.html, dashboard.html, app.js, auth-client.js, buzzbox.js (con migración de valores viejos guardados).
+3. **Notificaciones/campanita:** `activarPush` mejorada (valida HTTPS, reusa suscripción, mensajes claros, indicador 🔔 verde activa / 🔕 inactiva) + `estadoPushInicial()`.
+4. **"Choose file" en inglés:** input file nativo ocultado; reemplazado por botón propio **"📎 Seleccionar archivo"** + nombre en español + quitar (en dashboard.html y app.js).
+5. **Doble splash:** el splash de cPanel iba a la raíz `/` que mostraba splash.html del servidor. Corregido: (a) splash de cPanel va directo a `/index.html`; (b) la raíz `/` del server ahora hace `redirect 302 a /index.html` (server/index.js) en vez de servir splash.html.
+6. **Eliminación de usuarios (rediseño):** ahora es **BORRADO COMPLETO real** (DELETE FROM usuarios), preserva tickets reasignándolos al master, limpia sesiones y push, registra `USUARIO_ELIMINADO` en bitácora. Frontend: filas de usuario **seleccionables/iluminadas** al clic, botón "🗑 Eliminar" → **modal propio** de confirmación → **PIN en modal propio** → borra y refresca. Se eliminaron las funciones viejas `__bajaUsuario`/`__reactivarUsuario`. VERIFICADO en vivo: alta ok, borrado completo (desaparece de lista), bitácora ok, PIN incorrecto rechazado.
+
+### Regla de oro del proyecto (recordatorio permanente)
+- **TODOS los modales son propios del sistema (BuzzBox), NUNCA del navegador** (`confirm()`/`prompt()`/`alert()` nativos prohibidos).
+
+### Splash cPanel (entrada de marca desde myspectra)
+- Carpeta `cpanel-splash/ticketInterno/` (index.html + logo.png + logo.ico). Se sube a `public_html/` de HostGator (queda `public_html/ticketInterno/`).
+- El splash muestra branding ULTRA con animación "Cargando..." (~2.6s) y redirige a `https://tickets.5962503.dpdns.org/index.html` (login directo, sin doble splash).
+- ZIP más reciente generado en `Backup/ticketInterno_splash_*.zip`.
+
+### Pendientes para próximas sesiones
+- Dejar el **conector cloudflared de `ticketINT`** como servicio permanente propio (hoy en background, no sobrevive reinicio).
+- Subir a HostGator el ZIP del splash corregido (evita doble splash) si aún no se hizo.
+- **Rotar tokens** del túnel expuestos durante soporte.
+- Considerar **Cloudflare Access** para limitar a `@corporativoultra.com`.
+- Cambiar contraseñas de los master (`Master2`/`Master3`) ahora que está en Internet.
+
+---
+
+*Derechos reservados ULTRA 2026 · Soporte: soporte.spectra@corporativoultra.com*

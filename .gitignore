@@ -11,3 +11,4 @@ uploads/*
 .env
 public/css/app.css
 *.log
+scripts/nssm.exe

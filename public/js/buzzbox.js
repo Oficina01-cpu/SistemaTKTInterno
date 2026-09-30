@@ -66,8 +66,9 @@
   }
 
   function syncTheme() {
-    const dark = document.documentElement.getAttribute("data-theme") === "ultradark";
-    document.documentElement.style.setProperty("--bb-bg", dark ? "#1A1A1A" : "#1A1A1A");
+    const th = document.documentElement.getAttribute("data-theme");
+    const dark = th === "dark" || th === "ultradark";
+    document.documentElement.style.setProperty("--bb-bg", "#1A1A1A");
     document.documentElement.style.setProperty("--bb-mbg", dark ? "#1A1A1A" : "#FFFFFF");
     document.documentElement.style.setProperty("--bb-mfg", dark ? "#F3F3F3" : "#1A1A1A");
   }
@@ -169,18 +170,19 @@
 
     // -------- PROMPT --------
     prompt(mensaje, { title = "ULTRA", placeholder = "", type = "text", okText = "Aceptar", cancelText = "Cancelar" } = {}) {
+      // Capturamos el valor del input ANTES de que el modal se cierre/elimine,
+      // guardandolo en el propio "value" del boton Aceptar.
+      const okBtn = { text: okText, primary: true, value: "", onClick: (m) => {
+        okBtn.value = m.querySelector("#bb-prompt-input").value;
+      } };
       return this.modal({
         title,
         bodyHTML: `<div>${mensaje}</div><input class="bb-input" id="bb-prompt-input" type="${type}" placeholder="${placeholder}"/>`,
         buttons: [
           { text: cancelText, value: null },
-          { text: okText, primary: true, value: undefined,
-            onClick: (m) => { m.dataset.val = m.querySelector("#bb-prompt-input").value; } },
+          okBtn,
         ],
-      }).then((v) => {
-        if (v === null) return null;
-        return document.querySelector("#bb-prompt-input")?.value ?? null;
-      });
+      }).then((v) => (v === null ? null : v));
     },
 
     // -------- LOADER --------

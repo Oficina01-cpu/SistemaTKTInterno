@@ -26,20 +26,25 @@
     return res.json();
   }
 
-  // ---- Tema ----
+  // ---- Tema (usa temas estandar de DaisyUI: dark / light) ----
   const THEME_KEY = "ultra_theme";
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
-    document.getElementById("themeIcon").textContent = t === "ultradark" ? "🌙" : "☀️";
+    const icon = document.getElementById("themeIcon");
+    if (icon) icon.textContent = t === "dark" ? "🌙" : "☀️";
     const bw = document.getElementById("brandWord");
-    if (bw) bw.style.color = t === "ultradark" ? "#FFFFFF" : "#1A1A1A";
+    if (bw) bw.style.color = t === "dark" ? "#FFFFFF" : "#1A1A1A";
     if (window.BuzzBox) BuzzBox.syncTheme();
     localStorage.setItem(THEME_KEY, t);
   }
-  applyTheme(localStorage.getItem(THEME_KEY) || "ultradark");
+  // Migra valores viejos (ultradark/ultralight) a dark/light
+  let _saved = localStorage.getItem(THEME_KEY);
+  if (_saved === "ultradark") _saved = "dark";
+  if (_saved === "ultralight") _saved = "light";
+  applyTheme(_saved || "dark");
   document.getElementById("themeToggle").onclick = () => {
     const cur = document.documentElement.getAttribute("data-theme");
-    applyTheme(cur === "ultradark" ? "ultralight" : "ultradark");
+    applyTheme(cur === "dark" ? "light" : "dark");
   };
 
   // ---- Cierre de sesión ----
@@ -150,11 +155,34 @@
       BuzzBox.success(`Ticket ${data.ticket.folio} creado`);
       e.target.reset();
       document.querySelectorAll(".dest-chk").forEach((c) => (c.checked = false));
+      limpiarAdjunto();
     } catch {
       BuzzBox.hideLoader();
       BuzzBox.error("Error al crear el ticket");
     }
   };
+
+  // ---- Selector de adjunto en espanol (evita el "Choose file" del navegador) ----
+  const inputAdjunto = document.getElementById("adjunto");
+  const btnAdjunto = document.getElementById("btnAdjunto");
+  const adjuntoNombre = document.getElementById("adjuntoNombre");
+  const btnAdjuntoQuitar = document.getElementById("btnAdjuntoQuitar");
+  function limpiarAdjunto() {
+    if (inputAdjunto) inputAdjunto.value = "";
+    if (adjuntoNombre) adjuntoNombre.textContent = "Ningún archivo seleccionado";
+    if (btnAdjuntoQuitar) btnAdjuntoQuitar.classList.add("hidden");
+  }
+  if (btnAdjunto) btnAdjunto.onclick = () => inputAdjunto.click();
+  if (inputAdjunto) inputAdjunto.onchange = () => {
+    const f = inputAdjunto.files[0];
+    if (f) {
+      adjuntoNombre.textContent = f.name;
+      btnAdjuntoQuitar.classList.remove("hidden");
+    } else {
+      limpiarAdjunto();
+    }
+  };
+  if (btnAdjuntoQuitar) btnAdjuntoQuitar.onclick = limpiarAdjunto;
 
   // ---- Render de tarjeta de ticket ----
   function ticketCard(t) {
@@ -245,21 +273,60 @@
   });
 
   // ---- Usuarios ----
+  let _usuariosCache = [];
   async function cargarUsuarios() {
     const data = await api("/api/usuarios");
+    _usuariosCache = data.usuarios || [];
     const cont = document.getElementById("listaUsuarios");
     cont.innerHTML = `<table class="table table-sm">
-      <thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Depto</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
-      <tbody>${(data.usuarios || []).map((u) => `
-        <tr>
+      <thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Depto</th><th>Rol</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
+      <tbody>${_usuariosCache.map((u) => `
+        <tr class="fila-usuario cursor-pointer hover:bg-base-300" data-uid="${u.id}">
           <td>${u.id}</td><td>${escapeHtml(u.correo)}</td><td>${escapeHtml(u.nombre || "—")}</td>
           <td>${escapeHtml(u.departamento || "—")}</td><td>${u.rol}</td>
           <td>${u.activo ? '<span class="badge badge-success">activo</span>' : '<span class="badge badge-error">baja</span>'}</td>
-          <td>${u.activo
-            ? `<button class="btn btn-xs btn-error" onclick="window.__bajaUsuario(${u.id})">Baja</button>`
-            : `<button class="btn btn-xs btn-success" onclick="window.__reactivarUsuario(${u.id})">Reactivar</button>`}</td>
+          <td class="text-right">
+            <button class="btn btn-xs btn-error" onclick="event.stopPropagation();window.__eliminarUsuario(${u.id})">🗑 Eliminar</button>
+          </td>
         </tr>`).join("")}</tbody></table>`;
+
+    // Seleccion visual de fila al hacer clic
+    cont.querySelectorAll(".fila-usuario").forEach((tr) => {
+      tr.addEventListener("click", () => {
+        cont.querySelectorAll(".fila-usuario").forEach((x) => {
+          x.classList.remove("fila-seleccionada");
+          x.style.background = "";
+        });
+        tr.classList.add("fila-seleccionada");
+        tr.style.background = "rgba(227,6,19,.18)";
+        tr.style.outline = "2px solid #E30613";
+      });
+    });
   }
+
+  // ---- Eliminar usuario: modal propio -> PIN propio -> borrado completo ----
+  window.__eliminarUsuario = async (id) => {
+    const u = _usuariosCache.find((x) => x.id === id) || { correo: "este usuario" };
+    // 1) Modal de confirmacion (propio del sistema)
+    const ok = await BuzzBox.confirm(
+      `¿Eliminar por completo a <b>${escapeHtml(u.correo)}</b>?<br><span style="opacity:.7">Esta acción no se puede deshacer. El usuario desaparecerá de la lista.</span>`,
+      { title: "Eliminar usuario", okText: "Sí, eliminar", cancelText: "Cancelar" }
+    );
+    if (!ok) return;
+    // 2) Pedir PIN (modal propio del sistema)
+    const pin = await BuzzBox.prompt("Ingresa el PIN de administración para confirmar la eliminación:", {
+      title: "PIN requerido", type: "password", placeholder: "PIN",
+    });
+    if (pin === null || pin === "") return;
+    // 3) Ejecutar borrado
+    const data = await api(`/api/usuarios/${id}?pin=${encodeURIComponent(pin)}`, { method: "DELETE" });
+    if (data.ok) {
+      BuzzBox.success(`Usuario ${data.eliminado || ""} eliminado. Registrado en bitácora.`);
+      cargarUsuarios();
+    } else {
+      BuzzBox.error(data.error || "No se pudo eliminar");
+    }
+  };
 
   document.getElementById("btnAltaUsuario").onclick = async () => {
     const pin = await BuzzBox.prompt("Ingresa el PIN de administración para dar de alta:", { title: "PIN requerido", type: "password" });
@@ -274,21 +341,6 @@
     const data = await api("/api/usuarios", { method: "POST", headers: jsonHeaders(), body: JSON.stringify(body) });
     if (data.ok) { BuzzBox.success("Usuario dado de alta. Clave inicial = teléfono."); cargarUsuarios(); }
     else BuzzBox.error(data.error || "No se pudo dar de alta");
-  };
-
-  window.__bajaUsuario = async (id) => {
-    const pin = await BuzzBox.prompt("PIN para dar de baja al usuario:", { title: "PIN requerido", type: "password" });
-    if (pin === null) return;
-    const data = await api(`/api/usuarios/${id}?pin=${encodeURIComponent(pin)}`, { method: "DELETE" });
-    if (data.ok) { BuzzBox.success("Usuario dado de baja"); cargarUsuarios(); }
-    else BuzzBox.error(data.error || "No se pudo dar de baja");
-  };
-  window.__reactivarUsuario = async (id) => {
-    const pin = await BuzzBox.prompt("PIN para reactivar al usuario:", { title: "PIN requerido", type: "password" });
-    if (pin === null) return;
-    const data = await api(`/api/usuarios/${id}/reactivar`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify({ pin }) });
-    if (data.ok) { BuzzBox.success("Usuario reactivado"); cargarUsuarios(); }
-    else BuzzBox.error(data.error || "No se pudo reactivar");
   };
 
   // ---- Departamentos (config) ----
@@ -336,25 +388,59 @@
   }
 
   // ---- Web Push ----
-  document.getElementById("btnPush").onclick = activarPush;
+  const btnPush = document.getElementById("btnPush");
+  btnPush.onclick = activarPush;
+
+  // Refleja visualmente si las notificaciones ya estan activas
+  function marcarCampanita(activa) {
+    if (!btnPush) return;
+    btnPush.textContent = activa ? "🔔" : "🔕";
+    btnPush.title = activa ? "Notificaciones activadas" : "Activar notificaciones";
+    btnPush.style.color = activa ? "#22C55E" : "";
+  }
+
+  async function estadoPushInicial() {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) { marcarCampanita(false); return; }
+      if (Notification.permission !== "granted") { marcarCampanita(false); return; }
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      marcarCampanita(!!sub);
+    } catch { marcarCampanita(false); }
+  }
+
   async function activarPush() {
     try {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         return BuzzBox.warning("Tu navegador no soporta notificaciones push");
       }
+      if (!window.isSecureContext) {
+        return BuzzBox.warning("Las notificaciones requieren HTTPS. Abre el sistema por su URL segura (https://).");
+      }
       const perm = await Notification.requestPermission();
-      if (perm !== "granted") return BuzzBox.warning("Permiso de notificaciones denegado");
+      if (perm !== "granted") {
+        marcarCampanita(false);
+        return BuzzBox.warning("Permiso de notificaciones denegado. Actívalo en el candado del navegador.");
+      }
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const { publicKey } = await (await fetch("/api/push/vapid")).json();
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+      const resp = await fetch("/api/push/vapid");
+      const { publicKey } = await resp.json();
+      if (!publicKey) return BuzzBox.error("El servidor no entregó la clave de notificaciones (VAPID).");
+      // Reusar suscripcion existente si ya hay
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
       await api("/api/push/subscribe", { method: "POST", headers: jsonHeaders(), body: JSON.stringify(sub) });
+      marcarCampanita(true);
       BuzzBox.success("Notificaciones activadas");
     } catch (e) {
-      BuzzBox.error("No se pudieron activar las notificaciones");
+      marcarCampanita(false);
+      BuzzBox.error("No se pudieron activar las notificaciones: " + (e && e.message ? e.message : "error desconocido"));
     }
   }
   function urlBase64ToUint8Array(base64String) {
@@ -380,5 +466,6 @@
     await cargarSesion();
     await cargarDepartamentos();
     initSocket();
+    estadoPushInicial();
   })();
 })();
